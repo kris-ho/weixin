@@ -3,17 +3,22 @@ package com.hks.weixin.utils;
 import com.hks.weixin.pojo.*;
 import com.sun.org.apache.xerces.internal.xs.XSTerm;
 import com.thoughtworks.xstream.XStream;
+import net.sf.json.JSONObject;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
-import java.io.InputStream;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 public class WxService {
+    private static final String APIKEY = "*********************************";
 
     public static boolean check(String token, String timestamp, String nonce, String signature) {
         //1）将token、timestamp、nonce三个参数进行字典序排序
@@ -83,7 +88,7 @@ public class WxService {
         String msgType = requestMap.get("MsgType");
         switch (msgType) {
             case "text":
-            msg = dealTextMessage(requestMap);
+                msg = dealTextMessage(requestMap);
                 break;
             case "image":
 
@@ -109,64 +114,65 @@ public class WxService {
             default:
                 break;
         }
-        if (msg != null){
-            return  beanToXml(msg);
+        if (msg != null) {
+            return beanToXml(msg);
         }
-        return  null;
+        return null;
     }
 
     private static BaseMessage dealTextMessage(Map<String, String> requestMap) {
         //用户发来的内容
         String msg = requestMap.get("Content");
-        if(msg.equals("图文")) {
+        if (msg.equals("图文")) {
             List<Item> articles = new ArrayList<>();
             articles.add(new Item("这是图文消息的标题", "这是图文消息的详细介绍", "http://mmbiz.qpic.cn/mmbiz_jpg/dtRJz5K066YczqeHmWFZSPINM5evWoEvW21VZcLzAtkCjGQunCicDubN3v9JCgaibKaK0qGrZp3nXKMYgLQq3M6g/0", "http://www.baidu.com"));
             NewsMessage nm = new NewsMessage(requestMap, articles);
             return nm;
         }
-        if(msg.equals("登录")) {
-            String url="https://open.weixin.qq.com/connect/oauth2/authorize?appid=wxb6777fffdf5b64a4&redirect_uri=http://www.6sdd.com/weixin/GetUserInfo&response_type=code&scope=snsapi_userinfo#wechat_redirect";
-            TextMessage tm = new TextMessage(requestMap, "点击<a href=\""+url+"\">这里</a>登录");
+        if (msg.equals("登录")) {
+            String url = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=wxb6777fffdf5b64a4&redirect_uri=http://www.6sdd.com/weixin/GetUserInfo&response_type=code&scope=snsapi_userinfo#wechat_redirect";
+            TextMessage tm = new TextMessage(requestMap, "点击<a href=\"" + url + "\">这里</a>登录");
             return tm;
         }
         //调用方法返回聊天的内容
-        //String resp = chat(msg);
-//        TextMessage tm = new TextMessage(requestMap, resp);
-        TextMessage tm = new TextMessage(requestMap, "你要干啥");
+        String resp = null;
+        try {
+            resp = chat(msg);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        TextMessage tm = new TextMessage(requestMap, resp);
         return tm;
     }
 
-//    private static String chat(String msg) {
-//        String result =null;
-//        String url ="http://op.juhe.cn/robot/index";//请求接口地址
-//        Map params = new HashMap();//请求参数
-//        params.put("key",APPKEY);//您申请到的本接口专用的APPKEY
-//        params.put("info",msg);//要发送给机器人的内容，不要超过30个字符
-//        params.put("dtype","");//返回的数据的格式，json或xml，默认为json
-//        params.put("loc","");//地点，如北京中关村
-//        params.put("lon","");//经度，东经116.234632（小数点后保留6位），需要写为116234632
-//        params.put("lat","");//纬度，北纬40.234632（小数点后保留6位），需要写为40234632
-//        params.put("userid","");//1~32位，此userid针对您自己的每一个用户，用于上下文的关联
-//        try {
-//            result =Util.net(url, params, "GET");
-//            //解析json
-//            JSONObject jsonObject = JSONObject.fromObject(result);
-//            //取出error_code
-//            int code = jsonObject.getInt("error_code");
-//            if(code!=0) {
-//                return null;
-//            }
-//            //取出返回的消息的内容
-//            String resp = jsonObject.getJSONObject("result").getString("text");
-//            return resp;
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//        return null;
-//    }
+    private static String chat(String msg) throws IOException {
+        String getURL = "http://www.tuling123.com/openapi/api?key=" + APIKEY + "&info=" + msg;
+        URL getUrl = new URL(getURL);
+        HttpURLConnection connection = (HttpURLConnection) getUrl.openConnection();
+        connection.connect();
+
+        // 取得输入流，并使用Reader读取
+        BufferedReader reader = new BufferedReader(new InputStreamReader( connection.getInputStream(), "utf-8"));
+        StringBuilder sb = new StringBuilder();
+        String len = "";
+        while ((len = reader.readLine()) != null) {
+            sb.append(len);
+        }
+        reader.close();
+        // 断开连接
+        connection.disconnect();
+        String[] ss = new String[10];
+        String s = sb.toString();
+        String answer;
+        ss = s.split(":");
+        answer = ss[ss.length-1];
+        answer = answer.substring(1,answer.length()-2);
+        return answer;
+    }
 
     /**
      * 把消息对象处理为xml对象
+     *
      * @param msg
      * @return
      */
