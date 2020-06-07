@@ -18,7 +18,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 public class WxService {
-    private static final String APIKEY = "*********************************";
+    //存储APIkey
+    private static final String APIKEY = "09e963e9cd4e44fd810f27fb7f31cd58";
+    //存储接口请求地址
+    private static final String APIURL = "http://openapi.tuling123.com/openapi/api/v2";
+    // 用户id
+    private static final String USERID = "382599";
 
     public static boolean check(String token, String timestamp, String nonce, String signature) {
         //1）将token、timestamp、nonce三个参数进行字典序排序
@@ -146,28 +151,7 @@ public class WxService {
     }
 
     private static String chat(String msg) throws IOException {
-        String getURL = "http://www.tuling123.com/openapi/api?key=" + APIKEY + "&info=" + msg;
-        URL getUrl = new URL(getURL);
-        HttpURLConnection connection = (HttpURLConnection) getUrl.openConnection();
-        connection.connect();
-
-        // 取得输入流，并使用Reader读取
-        BufferedReader reader = new BufferedReader(new InputStreamReader( connection.getInputStream(), "utf-8"));
-        StringBuilder sb = new StringBuilder();
-        String len = "";
-        while ((len = reader.readLine()) != null) {
-            sb.append(len);
-        }
-        reader.close();
-        // 断开连接
-        connection.disconnect();
-        String[] ss = new String[10];
-        String s = sb.toString();
-        String answer;
-        ss = s.split(":");
-        answer = ss[ss.length-1];
-        answer = answer.substring(1,answer.length()-2);
-        return answer;
+        return WxUtil.getAnswer(msg, APIKEY, APIURL, USERID);
     }
 
     /**
