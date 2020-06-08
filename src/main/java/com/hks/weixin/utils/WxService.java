@@ -1,7 +1,6 @@
 package com.hks.weixin.utils;
 
 import com.hks.weixin.pojo.*;
-import com.sun.org.apache.xerces.internal.xs.XSTerm;
 import com.thoughtworks.xstream.XStream;
 import net.sf.json.JSONObject;
 import org.dom4j.Document;
@@ -10,20 +9,27 @@ import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 public class WxService {
+    /*图灵机器人*/
     //存储APIkey
     private static final String APIKEY = "09e963e9cd4e44fd810f27fb7f31cd58";
     //存储接口请求地址
     private static final String APIURL = "http://openapi.tuling123.com/openapi/api/v2";
     // 用户id
     private static final String USERID = "382599";
+
+    /*获取AccessToken*/
+    private static final String GET_TOKEN_URL="https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=APPSECRET";
+    //微信公众号
+    private static final String APPID="wxbeb920e4bccc46e0";
+    private static final String APPSECRET="8f841e7044ef26d225c3f8707b356d33";
+
+    //用于存储token
+    private static AccessToken at;
 
     public static boolean check(String token, String timestamp, String nonce, String signature) {
         //1）将token、timestamp、nonce三个参数进行字典序排序
@@ -171,4 +177,29 @@ public class WxService {
         stream.processAnnotations(VoiceMessage.class);
         return stream.toXML(msg);
     }
+
+    /**
+     * 获取token
+     */
+    private static void getToken() {
+        String url = GET_TOKEN_URL.replace("APPID", APPID).replace("APPSECRET", APPSECRET);
+        String tokenStr = WxUtil.get(url);
+        JSONObject jsonObject = JSONObject.fromObject(tokenStr);
+        String token = jsonObject.getString("access_token");
+        String expireIn = jsonObject.getString("expires_in");
+        //创建token对象,并存起来。
+        at = new AccessToken(token, expireIn);
+    }
+
+    /**
+     * 向外暴露的获取token的方法
+     * @return
+     */
+    public static String getAccessToken() {
+        if(at==null||at.isExpired()) {
+            getToken();
+        }
+        return at.getAccessToken();
+    }
+
 }
