@@ -7,13 +7,83 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 
 public class WxUtil {
+
+    public static String sha1(String str) {
+
+        MessageDigest md = null;
+        try {
+            //获取一个加密对象
+            md = MessageDigest.getInstance("sha1");
+            //加密
+            byte[] digest = md.digest(str.getBytes());
+
+            char[] chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+            StringBuilder sb = new StringBuilder();
+            //处理加密结果
+            for (byte b : digest) {
+                sb.append(chars[(b >> 4) & 15]);
+                sb.append(chars[b & 15]);
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * 向指定的地址发送一个post请求，带着data数据
+     * @param url
+     * @param data
+     * @return
+     */
+    public static String post(String url, String data) {
+        OutputStream os = null;
+        InputStream is = null;
+
+        try {
+            URL urlObj = new URL(url);
+            URLConnection connection = urlObj.openConnection();
+            // 要发送数据出去，必须要设置为可发送数据状态
+            connection.setDoOutput(true);
+            // 获取输出流
+            os = connection.getOutputStream();
+            // 写出数据
+            os.write(data.getBytes());
+            // 获取输入流
+            is = connection.getInputStream();
+            byte[] b = new byte[1024];
+            int len;
+            StringBuilder sb = new StringBuilder();
+            while ((len = is.read(b)) != -1) {
+                sb.append(new String(b, 0, len));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (os != null) {
+                    os.close();
+                }
+                if (is != null) {
+                    is.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
     /**
      * 向指定的地址发送get请求
-     *
      * @param url
      */
     public static String get(String url) {
@@ -50,7 +120,6 @@ public class WxUtil {
 
     /**
      * 调用图灵机器人
-     *
      * @param msg
      * @return
      * @throws IOException
@@ -86,7 +155,6 @@ public class WxUtil {
 
     /**
      * 构建传输的正确的json格式的请求字符串
-     *
      * @param msg 输入内容
      * @return
      */
@@ -128,7 +196,6 @@ public class WxUtil {
 
     /**
      * 发送post请求到图灵服务器
-     *
      * @param url
      * @param reqMes
      * @return
@@ -185,13 +252,11 @@ public class WxUtil {
                 ex.printStackTrace();
             }
         }
-        System.out.println(responseStr.toString());
         return responseStr.toString();
     }
 
     /**
      * 从tulinPostStr返回的请求中取出结果
-     *
      * @param tulinPostStr
      * @return
      */

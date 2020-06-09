@@ -14,8 +14,7 @@ public class SubButton extends AbstractButton {
         this.sub_button = sub_button;
     }
 
-    public SubButton(String name, List<AbstractButton> sub_button) {
+    public SubButton(String name) {
         super(name);
-        this.sub_button = sub_button;
     }
 }
