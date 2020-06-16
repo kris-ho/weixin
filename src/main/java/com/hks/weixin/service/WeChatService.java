@@ -28,10 +28,17 @@ public interface WeChatService {
     String getQrCodeTicket();
 
     /**
+     * 获取已关注用户的基本信息
+     * @param openid
+     * @return
+     */
+    void getUInfo(String openid);
+
+    /**
      * 通过网页授权 获取用户信息
      * @param code
      */
-    void getUserInfo(String code);
+    String getUserInfo(String code);
 
     /**
      * Ml字符串转换成map

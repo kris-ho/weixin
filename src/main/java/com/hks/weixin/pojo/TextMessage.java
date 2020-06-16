@@ -25,4 +25,10 @@ public class TextMessage extends BaseMessage {
         this.content = content;
     }
 
+    @Override
+    public String toString() {
+        return "TextMessage{" +
+                "content='" + content + '\'' +
+                '}';
+    }
 }

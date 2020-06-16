@@ -1,12 +1,14 @@
 import com.hks.weixin.pojo.*;
-import com.hks.weixin.utils.WxService;
+import com.hks.weixin.service.WeChatService;
 import com.thoughtworks.xstream.XStream;
 import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class TestWx {
+
     @Test
     public void testMsg() {
         Map<String, String> map = new HashMap<>();

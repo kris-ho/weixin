@@ -1,27 +1,33 @@
-package com.hks.weixin.service.Impl;
+package com.hks.weixin.service.impl;
 
-import com.baidu.aip.ocr.AipOcr;
 import com.hks.weixin.pojo.*;
+import com.hks.weixin.service.UserInfoDao;
+import com.hks.weixin.service.UserSubInfoDao;
 import com.hks.weixin.service.WeChatService;
+import com.hks.weixin.utils.MsgTypeUtil;
 import com.hks.weixin.utils.WxUtil;
 import com.thoughtworks.xstream.XStream;
-import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+import org.apache.ibatis.annotations.Lang;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
 public class WeChatServiceImpl implements WeChatService {
     @Value("${wechat.token}")
     private String token;
+
     //图灵机器人
     @Value("${tulin.apikey}")
     private String apiKey;
@@ -37,6 +43,8 @@ public class WeChatServiceImpl implements WeChatService {
     private String appID;
     @Value("${wechat.appsecret}")
     private String appSecret;
+    @Value("${wechat.uurl}")
+    private String uurl;
 
     //微信网页授权
     @Value("${wechat.wxtokenurl}")
@@ -62,10 +70,14 @@ public class WeChatServiceImpl implements WeChatService {
     //用于存储微信网页授权AccessToken
     private static WxAccessToken wxat;
 
+    @Resource
+    private UserSubInfoDao userSubInfoDaoImpl;
+
     private String openid;
 
     /**
      * 检验signature
+     *
      * @param timestamp
      * @param nonce
      * @param signature
@@ -88,6 +100,7 @@ public class WeChatServiceImpl implements WeChatService {
 
     /**
      * XMl字符串转换成map
+     *
      * @param is
      * @return
      */
@@ -124,10 +137,11 @@ public class WeChatServiceImpl implements WeChatService {
         String msgType = requestMap.get("MsgType");
         switch (msgType) {
             case "text":
-                msg = dealTextMessage(requestMap);
+                String url = loginUrl.replace("REDIRECTURI", redirectUri);
+                msg = MsgTypeUtil.dealTextMsg(requestMap, apiKey, apiUrl, userID, url);
                 break;
             case "image":
-                msg = dealImage(requestMap);
+                msg = MsgTypeUtil.dealImage(requestMap, appBID, apiBKey, secretBKey);
                 break;
             case "voice":
 
@@ -156,94 +170,33 @@ public class WeChatServiceImpl implements WeChatService {
         return null;
     }
 
-    private BaseMessage dealImage(Map<String, String> requestMap) {
-        // 初始化一个AipOcr
-        AipOcr client = new AipOcr(appBID, apiBKey, secretBKey);
-        // 可选：设置网络连接参数
-        client.setConnectionTimeoutInMillis(2000);
-        client.setSocketTimeoutInMillis(60000);
-        // 调用接口
-        String path = requestMap.get("PicUrl");
-
-        //进行网络图片的识别
-        org.json.JSONObject res = client.generalUrl(path, new HashMap<String, String>());
-        String json = res.toString();
-        //转为jsonObject
-        JSONObject jsonObject = JSONObject.fromObject(json);
-        JSONArray jsonArray = jsonObject.getJSONArray("words_result");
-        Iterator<JSONObject> it = jsonArray.iterator();
-        StringBuilder sb = new StringBuilder();
-        while (it.hasNext()) {
-            JSONObject next = it.next();
-            sb.append(next.getString("words"));
-        }
-        return new TextMessage(requestMap, sb.toString());
-    }
-
-    private static BaseMessage dealEvent(Map<String, String> requestMap) {
+    /**
+     * 处理用户操作的按钮事件
+     *
+     * @param requestMap
+     * @return
+     */
+    private BaseMessage dealEvent(Map<String, String> requestMap) {
+        String url = loginUrl.replace("REDIRECTURI", redirectUri);
         String event = requestMap.get("Event");
         switch (event) {
             case "CLICK":
-                return dealClick(requestMap);
+                return MsgTypeUtil.dealClick(requestMap, url);
             case "VIEW":
-                return dealView(requestMap);
+                return MsgTypeUtil.dealView(requestMap);
+            case "subscribe":
+                openid = MsgTypeUtil.dealSubscribe(requestMap);
+                System.out.println(openid + "正在关注");
+                getUInfo(openid);
             default:
                 break;
         }
         return null;
-    }
-
-    private static BaseMessage dealView(Map<String, String> requestMap) {
-        return null;
-    }
-
-    private static BaseMessage dealClick(Map<String, String> requestMap) {
-        String key = requestMap.get("EventKey");
-        switch (key) {
-            //点击一菜单点
-            case "1":
-                //处理点击了第一个一级菜单
-                return new TextMessage(requestMap, "你点了一点第一个一级菜单");
-            case "32":
-                //处理点击了第三个一级菜单的第二个子菜单
-                break;
-            default:
-                break;
-        }
-        return null;
-    }
-
-    private BaseMessage dealTextMessage(Map<String, String> requestMap) {
-        //用户发来的内容
-        String msg = requestMap.get("Content");
-        if (msg.equals("图文")) {
-            List<Item> articles = new ArrayList<>();
-            articles.add(new Item("这是图文消息的标题", "这是图文消息的详细介绍", "http://mmbiz.qpic.cn/mmbiz_jpg/dtRJz5K066YczqeHmWFZSPINM5evWoEvW21VZcLzAtkCjGQunCicDubN3v9JCgaibKaK0qGrZp3nXKMYgLQq3M6g/0", "http://www.baidu.com"));
-            NewsMessage nm = new NewsMessage(requestMap, articles);
-            return nm;
-        }
-        if (msg.equals("登录")) {
-            String url = loginUrl.replace("REDIRECTURI", redirectUri);
-            TextMessage tm = new TextMessage(requestMap, "点击<a href=\"" + url + "\">这里</a>登录");
-            return tm;
-        }
-        //调用方法返回聊天的内容
-        String resp = null;
-        try {
-            resp = chat(msg);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        TextMessage tm = new TextMessage(requestMap, resp);
-        return tm;
-    }
-
-    private String chat(String msg) throws IOException {
-        return WxUtil.getAnswer(msg, apiKey, apiUrl, userID);
     }
 
     /**
      * 把消息对象处理为xml对象
+     *
      * @param msg
      * @return
      */
@@ -274,6 +227,7 @@ public class WeChatServiceImpl implements WeChatService {
 
     /**
      * 向外暴露的获取token的方法
+     *
      * @return
      */
     @Override
@@ -286,12 +240,16 @@ public class WeChatServiceImpl implements WeChatService {
 
     /**
      * 上传临时素材
+     *
      * @param path 上传的文件的路径
      * @param type 上传的文件类型
      * @return
      */
     public String upload(String path, String type) {
         File file = new File(path);
+        OutputStream out = null;
+        InputStream is = null;
+        InputStream is2 = null;
         //地址
         String url = "https://api.weixin.qq.com/cgi-bin/media/upload?access_token=ACCESS_TOKEN&type=TYPE";
         url = url.replace("ACCESS_TOKEN", getAccessToken()).replace("TYPE", type);
@@ -310,9 +268,9 @@ public class WeChatServiceImpl implements WeChatService {
             String boundary = "-----" + System.currentTimeMillis();
             conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
             //获取输出流
-            OutputStream out = conn.getOutputStream();
+            out = conn.getOutputStream();
             //创建文件的输入流
-            InputStream is = new FileInputStream(file);
+            is = new FileInputStream(file);
             //第一部分：头部信息
             //准备头部信息
             StringBuilder sb = new StringBuilder();
@@ -334,9 +292,8 @@ public class WeChatServiceImpl implements WeChatService {
             String foot = "\r\n--" + boundary + "--\r\n";
             out.write(foot.getBytes());
             out.flush();
-            out.close();
             //读取数据
-            InputStream is2 = conn.getInputStream();
+            is2 = conn.getInputStream();
             StringBuilder resp = new StringBuilder();
             while ((len = is2.read(b)) != -1) {
                 resp.append(new String(b, 0, len));
@@ -344,12 +301,27 @@ public class WeChatServiceImpl implements WeChatService {
             return resp.toString();
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+                if (is != null) {
+                    is.close();
+                }
+                if (is2 != null) {
+                    is2.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return null;
     }
 
     /**
      * 获取带参数二维码的ticket
+     *
      * @return
      */
     @Override
@@ -359,18 +331,7 @@ public class WeChatServiceImpl implements WeChatService {
         //生成临时字符二维码
         String data = "{\"expire_seconds\": 600, \"action_name\": \"QR_STR_SCENE\", \"action_info\": {\"scene\": {\"scene_str\": \"hks\"}}}";
         String result = WxUtil.post(url, data);
-        String ticket = JSONObject.fromObject(result).getString("ticket");
-        return ticket;
-    }
-
-    /**
-     * 获取已关注用户的基本信息
-     * @return
-     */
-    public String getUInfo(String openid) {
-        String url = userUrl.replace("ACCESS_TOKEN", getAccessToken()).replace("OPENID", openid);
-        String result = WxUtil.get(url);
-        return result;
+        return JSONObject.fromObject(result).getString("ticket");
     }
 
     /**
@@ -391,6 +352,7 @@ public class WeChatServiceImpl implements WeChatService {
 
     /**
      * 向外暴露的获取网页授权token的方法
+     *
      * @return
      */
     public String getWxAccessToken(String code) {
@@ -401,16 +363,36 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     /**
-     * 通过网页授权 获取用户信息
+     * 获取已关注用户的基本信息
+     *
      * @return
      */
     @Override
-    public void getUserInfo(String code) {
+    public void getUInfo(String openid) {
+        String url = uurl.replace("ACCESS_TOKEN", getAccessToken()).replace("OPENID", openid);
+        //返回json
+        String result = WxUtil.get(url);
+        System.out.println(result);
+        JSONObject jo = JSONObject.fromObject(result);
+        jo.put("tagid_list", "\"" + jo.getString("tagid_list") + "\"");
+        TbWechatUsersub user = (TbWechatUsersub) JSONObject.toBean(jo, TbWechatUsersub.class);
+        user.setSubscribeDate(new Date());
+        //user.setSubscribeTime(new Date(((long) jo.get("subscribe_time")) * 1000));
+        int index = 0;
+        index = userSubInfoDaoImpl.insTbWechatUserSub(user);
+        System.out.println(index);
+    }
+
+    /**
+     * 通过网页授权 获取用户信息
+     *
+     * @return
+     */
+    @Override
+    public String getUserInfo(String code) {
         String at = getWxAccessToken(code);
         //拉取用户的基本信息
         String url = userUrl.replace("ACCESS_TOKEN", at).replace("OPENID", openid);
-        String result = WxUtil.get(url);
-        //可以保存起来
-        System.out.println(result);
+        return WxUtil.get(url);
     }
 }

@@ -12,17 +12,20 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 
-public class WxUtil {
-
+public final class WxUtil {
+    /**
+     * 进行sha1加密
+     *
+     * @param str
+     * @return
+     */
     public static String sha1(String str) {
-
         MessageDigest md = null;
         try {
             //获取一个加密对象
             md = MessageDigest.getInstance("sha1");
             //加密
             byte[] digest = md.digest(str.getBytes());
-
             char[] chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
             StringBuilder sb = new StringBuilder();
             //处理加密结果
@@ -39,6 +42,7 @@ public class WxUtil {
 
     /**
      * 向指定的地址发送一个post请求，带着data数据
+     *
      * @param url
      * @param data
      * @return
@@ -50,6 +54,8 @@ public class WxUtil {
         try {
             URL urlObj = new URL(url);
             URLConnection connection = urlObj.openConnection();
+            connection.setRequestProperty("Accept-Charset", "utf-8");
+            connection.setRequestProperty("contentType", "utf-8");
             // 要发送数据出去，必须要设置为可发送数据状态
             connection.setDoOutput(true);
             // 获取输出流
@@ -84,6 +90,7 @@ public class WxUtil {
 
     /**
      * 向指定的地址发送get请求
+     *
      * @param url
      */
     public static String get(String url) {
@@ -91,6 +98,8 @@ public class WxUtil {
             URL urlObj = new URL(url);
             // 开连接
             URLConnection connection = urlObj.openConnection();
+            connection.setRequestProperty("Accept-Charset", "utf-8");
+            connection.setRequestProperty("contentType", "utf-8");
             InputStream is = connection.getInputStream();
             byte[] b = new byte[1024];
             int len;
@@ -105,7 +114,11 @@ public class WxUtil {
         return null;
     }
 
-    // 将map型转为请求参数型
+    /**
+     * 将map型转为请求参数型
+     * @param data
+     * @return
+     */
     public static String urlencode(Map<String, Object> data) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry i : data.entrySet()) {
@@ -155,6 +168,7 @@ public class WxUtil {
 
     /**
      * 构建传输的正确的json格式的请求字符串
+     *
      * @param msg 输入内容
      * @return
      */
@@ -196,6 +210,7 @@ public class WxUtil {
 
     /**
      * 发送post请求到图灵服务器
+     *
      * @param url
      * @param reqMes
      * @return
@@ -233,13 +248,12 @@ public class WxUtil {
             while ((line = in.readLine()) != null) {
                 responseStr.append(line);
             }
-//            status = new Integer(httpUrlConnection.getResponseCode()).toString();
-//            System.out.println("status=============="+status);
-//            System.out.println("response=============="+responseStr);
+            //status = new Integer(httpUrlConnection.getResponseCode()).toString();
+            //System.out.println("status=============="+status);
+            //System.out.println("response=============="+responseStr);
         } catch (Exception e) {
             System.out.println("发送 POST 请求出现异常！" + e);
         }
-        // 使用finally块来关闭输出流、输入流
         finally {
             try {
                 if (out != null) {
