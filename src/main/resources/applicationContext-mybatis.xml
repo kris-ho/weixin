@@ -15,7 +15,7 @@
     <!-- 注解扫描 -->
     <!--    <context:component-scan base-package="com.hks.weixin.*.impl"></context:component-scan>-->
     <!-- 加载属性文件 整个项目最多出现一次-->
-    <context:property-placeholder location="classpath:*/*.properties"/>
+    <context:property-placeholder location="classpath:*/db.properties,classpath:*/weixin.properties"/>
     <!-- 数据源 -->
         <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
             <property name="driverClassName" value="${jdbc.driver}"></property>

@@ -5,6 +5,8 @@
 # IntelliJ project files
 .idea
 *.iml
+db.properties
+weixin.properties
 out
 gen
 target
