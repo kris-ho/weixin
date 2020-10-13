@@ -23,7 +23,7 @@
         <mybatis-spring.version>1.2.2</mybatis-spring.version>
         <druid.version>1.0.9</druid.version>
         <aspectjweaver.version>1.8.9</aspectjweaver.version>
-        <junit.version>4.11</junit.version>
+        <junit.version>4.13.1</junit.version>
         <javax.servlet-api.version>3.1.0</javax.servlet-api.version>
         <jsp-api.version>2.2</jsp-api.version>
         <jstl.version>1.2</jstl.version>
