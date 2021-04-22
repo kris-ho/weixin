@@ -19,7 +19,7 @@
         <maven.compiler.target>1.7</maven.compiler.target>
         <spring.version>5.2.6.RELEASE</spring.version>
         <mysql-connector-java.version>5.1.29</mysql-connector-java.version>
-        <mybatis.version>3.2.8</mybatis.version>
+        <mybatis.version>3.5.6</mybatis.version>
         <mybatis-spring.version>1.2.2</mybatis-spring.version>
         <druid.version>1.0.9</druid.version>
         <aspectjweaver.version>1.8.9</aspectjweaver.version>
